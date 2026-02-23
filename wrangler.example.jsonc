@@ -1,12 +1,13 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "my-blog",
-  "compatibility_date": "2025-10-11",
+  "compatibility_date": "2026-02-17",
   "compatibility_flags": ["nodejs_compat"],
   "main": "./src/server.ts",
   "observability": {
     "enabled": true,
   },
+  "keep_vars": true,
   "routes": [
     {
       "pattern": "DOMAIN_PLACEHOLDER",
@@ -51,12 +52,26 @@
       "binding": "SCHEDULED_PUBLISH_WORKFLOW",
       "class_name": "ScheduledPublishWorkflow",
     },
+    {
+      "name": "export-workflow",
+      "binding": "EXPORT_WORKFLOW",
+      "class_name": "ExportWorkflow",
+    },
+    {
+      "name": "import-workflow",
+      "binding": "IMPORT_WORKFLOW",
+      "class_name": "ImportWorkflow",
+    },
   ],
   "durable_objects": {
     "bindings": [
       {
         "name": "RATE_LIMITER",
         "class_name": "RateLimiter",
+      },
+      {
+        "name": "PASSWORD_HASHER",
+        "class_name": "PasswordHasher",
       },
     ],
   },
@@ -80,6 +95,10 @@
       "tag": "rate-limiter-v1",
       "new_sqlite_classes": ["RateLimiter"],
     },
+    {
+      "tag": "password-hasher-v1",
+      "new_sqlite_classes": ["PasswordHasher"],
+    },
   ],
   "env": {
     "test": {
@@ -88,6 +107,10 @@
           {
             "name": "RATE_LIMITER",
             "class_name": "RateLimiter",
+          },
+          {
+            "name": "PASSWORD_HASHER",
+            "class_name": "PasswordHasher",
           },
         ],
       },
@@ -121,6 +144,16 @@
           "name": "scheduled-publish-workflow",
           "binding": "SCHEDULED_PUBLISH_WORKFLOW",
           "class_name": "ScheduledPublishWorkflow",
+        },
+        {
+          "name": "export-workflow",
+          "binding": "EXPORT_WORKFLOW",
+          "class_name": "ExportWorkflow",
+        },
+        {
+          "name": "import-workflow",
+          "binding": "IMPORT_WORKFLOW",
+          "class_name": "ImportWorkflow",
         },
       ],
       "queues": {

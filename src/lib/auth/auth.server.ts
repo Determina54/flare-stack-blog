@@ -2,18 +2,27 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { betterAuth } from "better-auth/minimal";
 import { AuthEmail } from "@/features/email/templates/AuthEmail";
-import { hashPassword, verifyPassword } from "@/lib/auth/auth.helpers";
 import { authConfig } from "@/lib/auth/auth.config";
 import * as authSchema from "@/lib/db/schema/auth.table";
 import { serverEnv } from "@/lib/env/server.env";
 
-let auth: Auth | null = null;
+async function checkEmailRateLimit(
+  env: Env,
+  scope: string,
+  email: string,
+): Promise<boolean> {
+  const identifier = `${scope}:${email.toLowerCase().trim()}`;
+  const id = env.RATE_LIMITER.idFromName(identifier);
+  const rateLimiter = env.RATE_LIMITER.get(id);
+  const result = await rateLimiter.checkLimit({
+    capacity: 3,
+    interval: "1h",
+  });
+  return result.allowed;
+}
 
 export function getAuth({ db, env }: { db: DB; env: Env }) {
-  if (auth) return auth;
-
-  auth = createAuth({ db, env });
-  return auth;
+  return createAuth({ db, env });
 }
 
 function createAuth({ db, env }: { db: DB; env: Env }) {
@@ -24,6 +33,14 @@ function createAuth({ db, env }: { db: DB; env: Env }) {
     GITHUB_CLIENT_ID,
     GITHUB_CLIENT_SECRET,
   } = serverEnv(env);
+
+  // 固定 10 个 DO 实例池，随机选择避免冷启动
+  const PASSWORD_HASHER_POOL_SIZE = 10;
+  function getPasswordHasher() {
+    const index = Math.floor(Math.random() * PASSWORD_HASHER_POOL_SIZE);
+    const id = env.PASSWORD_HASHER.idFromName(`hasher-${index}`);
+    return env.PASSWORD_HASHER.get(id);
+  }
 
   return betterAuth({
     ...authConfig,
@@ -37,10 +54,19 @@ function createAuth({ db, env }: { db: DB; env: Env }) {
       enabled: true,
       requireEmailVerification: true,
       password: {
-        hash: hashPassword,
-        verify: verifyPassword,
+        hash: (password: string) => getPasswordHasher().hash(password),
+        verify: (params: { hash: string; password: string }) =>
+          getPasswordHasher().verify(params),
       },
       sendResetPassword: async ({ user, url }) => {
+        // Per-email rate limit: 3 per hour — silently skip if exceeded
+        const allowed = await checkEmailRateLimit(
+          env,
+          "email-reset",
+          user.email,
+        );
+        if (!allowed) return;
+
         const emailHtml = renderToStaticMarkup(
           AuthEmail({ type: "reset-password", url }),
         );
@@ -57,6 +83,14 @@ function createAuth({ db, env }: { db: DB; env: Env }) {
     },
     emailVerification: {
       sendVerificationEmail: async ({ user, url }) => {
+        // Per-email rate limit: 3 per hour — silently skip if exceeded
+        const allowed = await checkEmailRateLimit(
+          env,
+          "email-verify",
+          user.email,
+        );
+        if (!allowed) return;
+
         const emailHtml = renderToStaticMarkup(
           AuthEmail({ type: "verification", url }),
         );

@@ -3,9 +3,12 @@ import { app } from "@/lib/hono";
 import { queueMessageSchema } from "@/lib/queue/queue.schema";
 
 export { CommentModerationWorkflow } from "@/features/comments/workflows/comment-moderation";
+export { ExportWorkflow } from "@/features/import-export/workflows/export.workflow";
+export { ImportWorkflow } from "@/features/import-export/workflows/import.workflow";
 export { PostProcessWorkflow } from "@/features/posts/workflows/post-process";
 export { ScheduledPublishWorkflow } from "@/features/posts/workflows/scheduled-publish";
 export { RateLimiter } from "@/lib/do/rate-limiter";
+export { PasswordHasher } from "@/lib/do/password-hasher";
 
 declare module "@tanstack/react-start" {
   interface Register {
@@ -27,9 +30,11 @@ export default {
       const parsed = queueMessageSchema.safeParse(message.body);
       if (!parsed.success) {
         console.error(
-          "[Queue] 无效消息:",
-          JSON.stringify(message.body),
-          parsed.error.message,
+          JSON.stringify({
+            message: "queue invalid message",
+            body: message.body,
+            error: parsed.error.message,
+          }),
         );
         message.ack();
         continue;
@@ -51,8 +56,11 @@ export default {
         message.ack();
       } catch (error) {
         console.error(
-          `[Queue] 处理失败 (attempt ${message.attempts}):`,
-          error instanceof Error ? error.message : "未知错误",
+          JSON.stringify({
+            message: "queue processing failed",
+            attempt: message.attempts,
+            error: error instanceof Error ? error.message : "unknown error",
+          }),
         );
         message.retry();
       }
