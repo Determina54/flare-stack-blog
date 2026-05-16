@@ -17,7 +17,7 @@ bun run test src/features/posts/posts.service.test.ts  # Run specific test file
 bun lint             # ESLint check
 bun lint:fix         # ESLint fix + formatting
 bun check            # Type check + lint + format (tsc --noEmit && lint:fix && format)
-```
+`````
 
 ## Architecture
 
