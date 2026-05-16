@@ -1,14 +1,18 @@
-import { Clock, FileText } from "lucide-react";
+import { Link } from "@tanstack/react-router";
+import { Clock, FileText, Pencil } from "lucide-react";
 import { Suspense } from "react";
-import TableOfContents from "./components/table-of-contents";
-import { RelatedPosts, RelatedPostsSkeleton } from "./components/related-posts";
+import type { PostPageProps } from "@/features/theme/contract/pages";
+import { FuwariCommentSection } from "@/features/theme/themes/fuwari/components/comments/view/comment-section";
+import { ContentRenderer } from "@/features/theme/themes/fuwari/components/content/content-renderer";
+import { authClient } from "@/lib/auth/auth.client";
+import { m } from "@/paraglide/messages";
 import { PostMeta } from "./components/post-meta";
 import { PostSummary } from "./components/post-summary";
-import type { PostPageProps } from "@/features/theme/contract/pages";
-import { ContentRenderer } from "@/features/theme/themes/fuwari/components/content/content-renderer";
-import { FuwariCommentSection } from "@/features/theme/themes/fuwari/components/comments/view/comment-section";
+import { RelatedPosts, RelatedPostsSkeleton } from "./components/related-posts";
+import TableOfContents from "./components/table-of-contents";
 
 export function PostPage({ post }: PostPageProps) {
+  const { data: session } = authClient.useSession();
   // Approximate word count
   const wordCount = post.readTimeInMinutes * 300;
 
@@ -28,19 +32,35 @@ export function PostPage({ post }: PostPageProps) {
       {/* Main Post Container */}
       <div className="fuwari-card-base z-10 px-6 md:px-9 pt-6 pb-4 relative w-full fuwari-onload-animation">
         {/* Word count and reading time */}
-        <div className="flex flex-row fuwari-text-30 gap-5 mb-3 transition">
+        <div className="flex flex-row flex-wrap fuwari-text-30 gap-5 mb-3 transition">
           <div className="flex flex-row items-center">
             <div className="transition h-6 w-6 rounded-md bg-black/5 dark:bg-white/10 fuwari-text-50 flex items-center justify-center mr-2">
               <FileText strokeWidth={1.5} size={16} />
             </div>
-            <div className="text-sm">约 {wordCount} 字</div>
+            <div className="text-sm">
+              {m.post_word_count({ count: wordCount })}
+            </div>
           </div>
           <div className="flex flex-row items-center">
             <div className="transition h-6 w-6 rounded-md bg-black/5 dark:bg-white/10 fuwari-text-50 flex items-center justify-center mr-2">
               <Clock strokeWidth={1.5} size={16} />
             </div>
-            <div className="text-sm">{post.readTimeInMinutes} 分钟</div>
+            <div className="text-sm">
+              {m.read_time({ count: post.readTimeInMinutes })}
+            </div>
           </div>
+          {session?.user.role === "admin" && (
+            <Link
+              to="/admin/posts/edit/$id"
+              params={{ id: String(post.id) }}
+              className="flex flex-row items-center fuwari-text-30 hover:fuwari-text-90 transition animate-in fade-in duration-500"
+            >
+              <div className="transition h-6 w-6 rounded-md bg-black/5 dark:bg-white/10 fuwari-text-50 flex items-center justify-center mr-2">
+                <Pencil strokeWidth={1.5} size={16} />
+              </div>
+              <div className="text-sm">{m.post_edit()}</div>
+            </Link>
+          )}
         </div>
 
         {/* Title */}

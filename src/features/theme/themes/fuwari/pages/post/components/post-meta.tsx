@@ -1,7 +1,8 @@
+import { ClientOnly, Link } from "@tanstack/react-router";
 import { Calendar, Edit, Tag } from "lucide-react";
-import { Link } from "@tanstack/react-router";
-import type { PostItem } from "@/features/posts/posts.schema";
+import type { PostItem } from "@/features/posts/schema/posts.schema";
 import { cn, formatDate } from "@/lib/utils";
+import { m } from "@/paraglide/messages";
 
 interface PostMetaProps {
   post: PostItem;
@@ -9,11 +10,11 @@ interface PostMetaProps {
 }
 
 export function PostMeta({ post, className }: PostMetaProps) {
-  const published = post.publishedAt || new Date();
+  const published = post.publishedAt;
   const updated = post.updatedAt;
-
-  // Date logic: only show updated if it's different from published date
-  const isUpdated = formatDate(published) !== formatDate(updated);
+  const isUpdated = Boolean(
+    published && updated && published.getTime() !== updated.getTime(),
+  );
 
   return (
     <div
@@ -28,7 +29,7 @@ export function PostMeta({ post, className }: PostMetaProps) {
           <Calendar strokeWidth={1.5} size={20} />
         </div>
         <span className="text-sm font-medium fuwari-text-50">
-          {formatDate(published)}
+          <ClientOnly fallback="-">{formatDate(published)}</ClientOnly>
         </span>
       </div>
 
@@ -39,7 +40,7 @@ export function PostMeta({ post, className }: PostMetaProps) {
             <Edit strokeWidth={1.5} size={20} />
           </div>
           <span className="text-sm font-medium fuwari-text-50">
-            {formatDate(updated)}
+            <ClientOnly fallback="-">{formatDate(updated)}</ClientOnly>
           </span>
         </div>
       )}
@@ -70,7 +71,7 @@ export function PostMeta({ post, className }: PostMetaProps) {
             ))
           ) : (
             <span className="transition fuwari-text-50 text-sm font-medium">
-              无标签
+              {m.post_no_tags()}
             </span>
           )}
         </div>

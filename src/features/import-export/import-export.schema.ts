@@ -1,6 +1,8 @@
 import { z } from "zod";
 import { POST_STATUSES } from "@/lib/db/schema";
 
+export const ImportExportLocaleSchema = z.enum(["zh", "en"]);
+
 // --- Export ---
 
 export const StartExportInputSchema = z.object({
@@ -16,6 +18,7 @@ export const StartImportInputSchema = z.object({
   taskId: z.string(),
   r2Key: z.string(),
   mode: z.enum(["native", "markdown"]),
+  locale: ImportExportLocaleSchema.optional(),
 });
 
 export type StartImportInput = z.infer<typeof StartImportInputSchema>;
@@ -64,7 +67,7 @@ export type ExportManifest = z.infer<typeof ExportManifestSchema>;
 // --- Frontmatter ---
 
 export const PostFrontmatterSchema = z.object({
-  title: z.string(),
+  title: z.string().default(""),
   slug: z.string().default(""),
   summary: z.string().optional().nullable(),
   status: z.enum(POST_STATUSES).default("published"),

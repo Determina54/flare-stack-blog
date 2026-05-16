@@ -67,8 +67,7 @@
   }
 
   a:not(.no-styling) {
-    @apply relative bg-none font-medium text-(--fuwari-primary)
-        underline decoration-(--fuwari-link-underline) decoration-1 decoration-dashed underline-offset-4;
+    @apply relative bg-none font-medium text-(--fuwari-primary) underline decoration-(--fuwari-link-underline) decoration-1 decoration-dashed underline-offset-4;
     box-decoration-break: clone;
     -webkit-box-decoration-break: clone;
     display: inline-block;
@@ -147,6 +146,20 @@
     p:after {
       @apply content-none;
     }
+  }
+
+  /* KaTeX / Mathematics */
+  .tiptap-mathematics-render,
+  .katex {
+    font-size: 1.1em;
+    color: var(--tw-prose-body);
+  }
+  .tiptap-mathematics-render[data-type="block-math"],
+  .katex-display {
+    margin: 1.5em 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+    text-align: center;
   }
 }
 

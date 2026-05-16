@@ -1,5 +1,6 @@
 import path from "node:path";
 import { cloudflare } from "@cloudflare/vite-plugin";
+import { paraglideVitePlugin } from "@inlang/paraglide-js";
 import tailwindcss from "@tailwindcss/vite";
 import { devtools } from "@tanstack/devtools-vite";
 import { tanstackStart } from "@tanstack/react-start/plugin/vite";
@@ -9,7 +10,7 @@ import viteTsConfigPaths from "vite-tsconfig-paths";
 import { z } from "zod";
 import packageJson from "./package.json";
 
-import { themeNames, themes } from "./src/features/theme/config";
+import { themeNames, themes } from "./src/features/theme/registry";
 
 const buildEnvSchema = z.object({
   THEME: z.enum(themeNames).catch("default"),
@@ -21,6 +22,7 @@ const config = defineConfig(({ mode }) => {
   return {
     define: {
       __APP_VERSION__: JSON.stringify(packageJson.version),
+      __THEME_NAME__: JSON.stringify(buildEnv.THEME),
       __THEME_CONFIG__: JSON.stringify(themes[buildEnv.THEME]),
     },
     resolve: {
@@ -33,6 +35,12 @@ const config = defineConfig(({ mode }) => {
       },
     },
     plugins: [
+      paraglideVitePlugin({
+        project: "./project.inlang",
+        outdir: "./src/paraglide",
+        strategy: ["cookie", "preferredLanguage", "baseLocale"],
+        cookieName: "LOCALE",
+      }),
       cloudflare({
         viteEnvironment: {
           name: "ssr",
@@ -48,4 +56,5 @@ const config = defineConfig(({ mode }) => {
     ],
   };
 });
+
 export default config;

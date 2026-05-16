@@ -1,3 +1,5 @@
+中文 | [English](./theme-guide.en.md)
+
 # 主题开发指南
 
 本文介绍如何为 Flare Stack Blog 创建自定义主题。
@@ -24,23 +26,26 @@ vite.config.ts
 
 `ThemeComponents` 接口列出了主题必须导出的所有组件。你的 `index.ts` 必须满足这个接口：
 
-| 字段                                          | 说明                           |
-| :-------------------------------------------- | :----------------------------- |
-| `PublicLayout`                                | 公共布局（含 Navbar / Footer） |
-| `AuthLayout`                                  | 认证页布局                     |
-| `UserLayout`                                  | 登录用户专属布局               |
-| `HomePage` / `HomePageSkeleton`               | 首页及其加载骨架屏             |
-| `PostsPage` / `PostsPageSkeleton`             | 文章列表页及骨架屏             |
-| `PostPage` / `PostPageSkeleton`               | 文章详情页及骨架屏             |
-| `FriendLinksPage` / `FriendLinksPageSkeleton` | 友链列表页及骨架屏             |
-| `SearchPage`                                  | 搜索页                         |
-| `SubmitFriendLinkPage`                        | 友链提交页                     |
-| `LoginPage`                                   | 登录页                         |
-| `RegisterPage`                                | 注册页                         |
-| `ForgotPasswordPage`                          | 找回密码页                     |
-| `ResetPasswordPage`                           | 重置密码页                     |
-| `VerifyEmailPage`                             | 邮箱验证页                     |
-| `ProfilePage`                                 | 个人资料页                     |
+| 字段                                          | 说明                                     |
+| :-------------------------------------------- | :--------------------------------------- |
+| `PublicLayout`                                | 公共布局（含 Navbar / Footer）           |
+| `AuthLayout`                                  | 认证页布局                               |
+| `UserLayout`                                  | 登录用户专属布局                         |
+| `HomePage` / `HomePageSkeleton`               | 首页及其加载骨架屏                       |
+| `PostsPage` / `PostsPageSkeleton`             | 文章列表页及骨架屏                       |
+| `PostPage` / `PostPageSkeleton`               | 文章详情页及骨架屏                       |
+| `FriendLinksPage` / `FriendLinksPageSkeleton` | 友链列表页及骨架屏                       |
+| `SearchPage`                                  | 搜索页                                   |
+| `SubmitFriendLinkPage`                        | 友链提交页                               |
+| `LoginPage`                                   | 登录页                                   |
+| `RegisterPage`                                | 注册页                                   |
+| `ForgotPasswordPage`                          | 找回密码页                               |
+| `ResetPasswordPage`                           | 重置密码页                               |
+| `VerifyEmailPage`                             | 邮箱验证页                               |
+| `ProfilePage`                                 | 个人资料页                               |
+| `config`                                      | 主题静态配置（数据获取参数与预加载配置） |
+| `getDocumentStyle`                            | 可选：向 document 根节点注入主题样式变量 |
+| `Toaster`                                     | Toast 通知组件（Sonner 封装）            |
 
 > **骨架屏（Skeleton）**：用作 TanStack Router 的 `pendingComponent`，在页面数据请求期间展示的过渡 UI。主题可以根据自身的交互设计语言自行决定是否需要实现它（例如，为了配合某些入场动画，您可以选择直接返回 `null` 而不渲染占位图）。
 
@@ -133,7 +138,7 @@ src/features/theme/themes/<your-theme>/
 │   └── comments/             # 评论区组件（可选，可复用共享组件）
 │       ├── view/             # 评论展示
 │       └── editor/           # 评论编辑器
-└── config.ts                 # 主题静态配置
+└── config.ts                 # 主题静态配置（数据获取参数：分页大小、相关文章数等）
 ```
 
 ## Step-by-step：创建第一个主题
@@ -148,7 +153,7 @@ bun run create-theme
 
 脚本会创建所有必需的布局、页面和骨架屏文件，组件实现为占位符，方便你在此基础上逐步替换为真实 UI。完成后按提示：
 
-1. 在 `vite.config.ts` 的 `z.enum(["default"])` 中加入新主题名
+1. 在 `src/features/theme/registry.ts` 中注册新主题（详见下文 [注册主题](#step-5注册主题并启动)）
 2. 在 `.env` 中设置 `THEME=<your-theme>` 并启动开发
 
 ---
@@ -227,43 +232,52 @@ export function HomePageSkeleton() {
 
 ```ts
 // src/features/theme/themes/my-theme/index.ts
+import type { SiteConfig } from "@/features/config/site-config.schema";
 import type { ThemeComponents } from "@/features/theme/contract/components";
+import { config } from "./config";
 import { PublicLayout } from "./layouts/public-layout";
 import { AuthLayout } from "./layouts/auth-layout";
 import { UserLayout } from "./layouts/user-layout";
 import { HomePage, HomePageSkeleton } from "./pages/home/page";
+import Toaster from "@/components/ui/toaster";
 // ... 其余 import
 
 export default {
+  config,
+  getDocumentStyle: (_siteConfig: SiteConfig) => undefined,
   PublicLayout,
   AuthLayout,
   UserLayout,
   HomePage,
   HomePageSkeleton,
+  Toaster,
   // ... 其余组件
 } satisfies ThemeComponents;
 ```
+
+如果主题需要把运行时配置映射成 CSS 变量（例如把 `siteConfig` 中的主题色注入到 `<html>`），可以实现 `getDocumentStyle`；不需要时直接返回 `undefined` 即可。
 
 如果遗漏了任何必须的组件，TypeScript 会在此处报错，明确指出缺少哪个字段。
 
 ### Step 5：注册主题并启动
 
-打开 `src/features/theme/config.ts`，在 `themeNames` 中将你的主题名加入枚举：
+打开 `src/features/theme/registry.ts`（主题注册表），进行以下操作：
+
+1. 在 `themeNames` 中加入新主题名。
+2. 在 `themes` 常量中增加该主题的路由级配置（`viewTransition`、`pendingMs`）。
+
+> [!NOTE]
+> `vite.config.ts` 会自动从该文件中同步主题列表，因此你无需手动修改 Vite 配置。
+> [!TIP]
+> 这个文件中的 `ThemeRouterConfig` 只控制路由行为（过渡动画、pending 延迟），不要与每个主题自身的 `config.ts`（数据获取参数如分页大小）混淆。
 
 ```ts
-// src/features/theme/config.ts
-export const themeNames = ["default", "my-theme"] as const;
-export type ThemeName = (typeof themeNames)[number];
-
-export interface ThemeConfig {
-  viewTransition: boolean;
-}
-
-export const themes: Record<ThemeName, ThemeConfig> = {
-  default: {
-    viewTransition: true,
-  },
-  my-theme: {
+// src/features/theme/registry.ts
+export const themeNames = ["default", "fuwari", "my-theme"] as const;
+// ...
+export const themes: Record<ThemeName, ThemeRouterConfig> = {
+  // ...
+  "my-theme": {
     viewTransition: false,
   },
 };
@@ -319,7 +333,7 @@ export function renderReact(content: JSONContent) {
 
 | 可以 import        | 来源                                            | 说明                                |
 | :----------------- | :---------------------------------------------- | :---------------------------------- |
-| 博客配置           | `@/blog.config`                                 | 标题、作者、社交链接等              |
+| 博客默认配置       | `@/blog.config`                                 | 默认值与兜底配置，不建议在主题组件中直接读取运行时配置 |
 | 业务 Queries/Hooks | `@/features/*/queries/`、`@/features/*/hooks/`  | TanStack Query 查询工厂、业务 hooks |
 | Schema 类型        | `@/features/*/schema`                           | Zod schema 和 TypeScript 类型       |
 | Tiptap 编辑器配置  | `@/features/posts/editor/config`                | 文章编辑器的 extension 列表         |
@@ -331,7 +345,7 @@ export function renderReact(content: JSONContent) {
 
 ## 主题专属配置
 
-除了 `ThemeConfig`（数据获取参数）外，主题还可以在 `blogConfig` 中声明**专属配置项**，用于图片路径、颜色等需要用户自定义的内容。
+除了主题契约中的 `ThemeConfig`（`contract/config.ts` 中定义的数据获取参数）外，主题还可以在 `blogConfig` 中声明**专属配置项**，用于图片路径、颜色等需要用户自定义的内容。后台“设置”页保存的是运行时站点配置，`blog.config.ts` 则负责默认值与兜底值。
 
 ### 约定
 
@@ -343,35 +357,41 @@ export const blogConfig = {
   // ... 公共配置 ...
   theme: {
     fuwari: {
-      homeBg: env.VITE_FUWARI_HOME_BG || "/images/home-bg.jpg",
-      avatar: env.VITE_FUWARI_AVATAR || "/images/avatar.png",
+      homeBg: "/images/home-bg.webp",
+      avatar: "/images/avatar.png",
     },
     // "my-theme": { ... }
   },
 };
 ```
 
-### 环境变量命名规则
+### 覆盖方式
 
-使用 `VITE_<THEME_NAME>_<KEY>` 格式，例如：
+`blog.config.ts` 是默认值来源。若你启用了后台站点配置，运行时会在服务端把数据库里的站点配置合并到这些默认值之上。因此：
 
-| 环境变量              | 说明                  | 默认值                |
-| :-------------------- | :-------------------- | :-------------------- |
-| `VITE_FUWARI_HOME_BG` | Fuwari 首页背景图路径 | `/images/home-bg.jpg` |
-| `VITE_FUWARI_AVATAR`  | Fuwari 侧边栏头像路径 | `/images/avatar.png`  |
-
-新增的环境变量需要同步添加到 `src/lib/env/client.env.ts` 的 Zod schema 中。
+- 内容运营和站点个性化调整应通过后台“设置”页完成
+- 主题组件在运行时应优先读取 `siteConfig`
+- `blog.config.ts` 更适合作为主题开发时新增字段的初始默认值
 
 ### 在组件中使用
 
 ```tsx
-import { blogConfig } from "@/blog.config";
+import { useRouteContext } from "@tanstack/react-router";
 
-// 直接访问当前主题的配置
-<img src={blogConfig.theme.fuwari.homeBg} alt="" />;
+export function ProfileBackground() {
+  const { siteConfig } = useRouteContext({ from: "__root__" });
+
+  return <img src={siteConfig.theme.fuwari.homeBg} alt="" />;
+}
 ```
 
-> **为什么不放在 `ThemeConfig` 中？** `ThemeConfig` 是编译时契约的一部分，主要用于路由 loader 的数据获取参数（如分页大小）。而图片路径等部署级别的配置更适合通过环境变量注入，放在 `blogConfig` 中可以统一管理，也方便用户在 `.env` 文件中覆盖。
+如果你只是为主题新增一个可被后台覆盖的字段，应当：
+
+1. 在 `src/blog.config.ts` 中提供默认值
+2. 在站点配置 schema 中声明该字段
+3. 在主题组件里从运行时 `siteConfig` 读取它
+
+> **为什么不放在 `ThemeConfig` 中？** `ThemeConfig` 是编译时契约的一部分，主要用于路由 loader 的数据获取参数（如分页大小）。而图片路径、品牌文案这类站点个性化字段不属于路由数据获取参数；把它们放在 `blogConfig` 与站点配置 schema 中，既能提供默认值，也能让后台“设置”页在运行时覆盖这些值。
 
 ## 注意事项
 
