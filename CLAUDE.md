@@ -1,5 +1,6 @@
 # CLAUDE.md
 
+
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## Project Overview
@@ -89,3 +90,6 @@ console.error(
   JSON.stringify({ message: "request failed", error: String(error) }),
 );
 ```
+=======
+Read `AGENTS.md` for the repo's engineering-skill configuration.
+
