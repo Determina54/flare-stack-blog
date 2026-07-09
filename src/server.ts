@@ -22,6 +22,14 @@ declare module "@tanstack/react-start" {
 
 export default {
   async fetch(request, env, ctx) {
+    const url = new URL(request.url);
+    
+    // ✅ 关键：静态资源直接返回，不经过 handleRootRequest
+    if (url.pathname.startsWith('/assets/')) {
+      return env.ASSETS.fetch(request);
+    }
+    
+    // ✅ 其他请求才交给 handleRootRequest
     const { handleRootRequest } = await import("@/lib/worker/root-handler");
     return handleRootRequest(request, env, ctx);
   },
